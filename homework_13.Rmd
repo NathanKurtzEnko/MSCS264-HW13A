@@ -68,95 +68,31 @@ Hints:
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
 
 ```{r eval=FALSE}
-#ATTEMPT 1
-url <- "https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc"
-
-movies_text <- read_html(url) %>%
-  html_nodes(movie_text, '//*[contains(concat( " ", @class, " " ), concat( " ", "ratings-imdb-rating", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "ratings-metascore", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "lister-item-header", " " ))]//a') %>% 
-  html_text()
-
-gross_text <- read_html(url)%>%
-  html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "sort-num_votes-visible", " " ))]//*~[contains(concat( " ", @class, " " ), concat( " ", "ghost", " " ))]//span') %>%
-  html_text()
-
-gross_table <- as.tibble(gross_text)
-
-movie_table2 <- as.tibble(movies_text) 
-
-movie_table <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
-
-
-for( i in 0:49) {
-  movie_table[i,1] <- slice(movie_table2, 1+4*i)
-  movie_table[i,3] <- slice(movie_table2, 2+4*i)
-  movie_table[i,4] <- slice(movie_table2, 3+4*i)
-  movie_table[i,2] <- slice(gross_table, i+1)
-}
-
-for( i in 0:49) {
-  movie_table[i,1] <- movies_text[1+4*i]
-  movie_table[i,3] <- movies_text[2+4*i]
-  movie_table[i,4] <- movies_text[3+4*i]
-  movie_table[i,2] <- gross_text[i+1]
-}
-
-
-
-#ATTEMPT 2
-
-movies_text2 <- read_html(url)%>%
-  html_node(xpath = '.ratings-metascore , strong , .ghost~ .text-muted+ span , .lister-item-header a') %>%
-  html_text()
-
-movie_table3 <- as.tibble(movies_text2)
-
-movie_table4 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
-
-
-for( i in 0:49) {
-  movie_table4[i,1] <- slice(movie_table3, 1+4*i)
-  movie_table4[i,3] <- slice(movie_table3, 2+4*i)
-  movie_table4[i,4] <- slice(movie_table3, 3+4*i)
-  movie_table4[i,2] <- slice(movie_table3, 4+4*i)
-}
-
-for( i in 0:49) {
-  movie_table4[i,1] <- movies_text2[1+4*i]
-  movie_table4[i,3] <- movies_text2[2+4*i]
-  movie_table4[i,4] <- movies_text2[3+4*i]
-  movie_table4[i,2] <- movies_text2[4+4*i]
-}
-
-#ATTEMPT 3
-
-movie_titles <- read_html(url)%>%
-  html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "lister-item-header", " " ))]//a') %>%
-  html_text()
-
-myapikey <- "94f27d05"
-
-movie_table5 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
-
-for(i in 1:50) {
-  url2 <- str_c("http://www.omdbapi.com/?t=",movie_titles[i],
-               "&y=2017&apikey=", myapikey)
-  onemovie <- GET(url)
-  details <- content(onemovie, "parse")
-  movie_table5[i,1] <- details$Title
-  movie_table5[i,4] <- parse_number(details$Metascore)
-  movie_table5[i,3] <- parse_number(details$imdbRating)
-  movie_table5[i,2] <- parse_number(details$BoxOffice)   # no $ and ,'s
-}
-
-
-#ATTEMPT 4
-
 url <- "https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc"
 
 movies <- read_html(url)
 movies2 <- html_nodes(movies, '.ratings-metascore , strong , .ghost~ .text-muted+ span , .lister-item-header a')
-movies3 <- html_text(2)
+movies3 <- html_text(movies2)
+movies4 <- c()
 
+for(i in 7:206) {
+  movies4[i-6] <- movies3[i] 
+}
+
+movie_table4 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
+
+for(i in 1:49) {
+  movie_table4[i,1] <- movies4[1+4*i]
+  movie_table4[i,3] <- movies4[2+4*i]
+  movie_table4[i,4] <- movies4[3+4*i]
+  movie_table4[i,2] <- movies4[4+4*i]
+}
+
+movie_table4 <- movie_table4 %>%
+  mutate(gross_mil = parse_number(gross),
+         imdb_score = parse_number(imdb_score),
+         metascore = parse_number(metascore))%>%
+  select(title, gross_mil, imdb_score, metascore)
 ```
 
 
