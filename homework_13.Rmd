@@ -17,8 +17,9 @@ You should submit a knitted pdf file on Moodle, but be sure to show all of your 
 library(tidyverse)
 library(stringr)
 library(rvest)
-library(XML)
-library(RCurl)
+library(httr)
+library(ggrepel)
+library(nycflights13)
 ```
 
 ##Web scraping
@@ -32,18 +33,28 @@ data <- read_html(url)
 tables <- html_nodes(data, css = "table")
 crimes <- html_table(tables, header = TRUE, fill = TRUE)[[2]]
 
-crimes2 <- as.data.frame(crimes)[c(1,2,3,4,5,6,7,8,9,10,11,12,13)]
+crimes2 <- as.data.frame(crimes)[c(1:13)]
 
 crimes3 <- as.tibble(crimes2)
 
 crimes4 <- crimes3 %>%
-  rename(total_violent_crime = `Voilent.Crime`,
-         murder/manslaughter = `Voilent.Crime.1`,
-         rape = `Voilent.Crime.2`, robbery = `Voilent.Crime.3`,
-         agg_assault = `Voilent.Crime.4`, total_prop_crime = `Property.Crime`,
-         burglary = `Property.Crime.1`, larceny = `Property.Crime.2`,
-         gta = `Property.Crime.3`)
-#asdf
+  rename(`total_violent_crime` = `Violent Crime`,
+         `murder/manslaughter` = `Violent Crime.1`,
+         `rape` = `Violent Crime.2`, `robbery` = `Violent Crime.3`,
+         `agg_assault` = `Violent Crime.4`, `total_prop_crime` = `Property Crime`,
+         `burglary` = `Property Crime.1`, `larceny` = `Property Crime.2`,
+         `gta` = `Property Crime.3`)%>%
+  slice(2:n())%>%
+  mutate(`total_violent_crime` = as.numeric(`total_violent_crime`),
+         `murder/manslaughter` = as.numeric(`murder/manslaughter`),
+         `rape` = as.numeric(`rape`), `robbery` = as.numeric(`robbery`),
+         `agg_assault` = as.numeric(`agg_assault`), `total_prop_crime` = as.numeric(`total_prop_crime`),
+         `burglary` = as.numeric(`burglary`), `larceny` = as.numeric(`larceny`),
+         `gta` = as.numeric(`gta`), Population = parse_number(Population))
+
+ggplot(crimes4, aes(x = total_violent_crime, y = total_prop_crime))+
+  geom_jitter()+
+  geom_label_repel(label = crimes4$City)
 ```
 
 
@@ -52,16 +63,99 @@ Hints:
 - after reading in the table using `html_table()`, create a data frame with just the columns you want, using a command such as: `crimes3 <- as.data.frame(crimes2)[,c(LIST OF COLUMN NUMBERS)]`.  Otherwise, R gets confused since it appears as if several columns all have the same column name.
 - then, turn `crimes3` into a tibble with `as.tibble(crimes3)` and do necessary tidying: get rid of unneeded rows, parse columns into proper format, etc.
 
+\textbf{Answer:} St. Louis, Oakland, memphis, Irvine, and Plano have extreme values of VCrate and PCrate.
+
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
 
-```{r}
+```{r eval=FALSE}
+#ATTEMPT 1
 url <- "https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc"
 
 movies_text <- read_html(url) %>%
-  html_nodes(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "ratings-imdb-rating", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "ratings-metascore", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "lister-item-header", " " ))]//a') %>% 
-  html_text() 
+  html_nodes(movie_text, '//*[contains(concat( " ", @class, " " ), concat( " ", "ratings-imdb-rating", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "ratings-metascore", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "lister-item-header", " " ))]//a') %>% 
+  html_text()
 
-movie_table <- tibble(title = character(), gross_imdb_score = double(), metascore = double())
+gross_text <- read_html(url)%>%
+  html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "sort-num_votes-visible", " " ))]//*~[contains(concat( " ", @class, " " ), concat( " ", "ghost", " " ))]//span') %>%
+  html_text()
+
+gross_table <- as.tibble(gross_text)
+
+movie_table2 <- as.tibble(movies_text) 
+
+movie_table <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
+
+
+for( i in 0:49) {
+  movie_table[i,1] <- slice(movie_table2, 1+4*i)
+  movie_table[i,3] <- slice(movie_table2, 2+4*i)
+  movie_table[i,4] <- slice(movie_table2, 3+4*i)
+  movie_table[i,2] <- slice(gross_table, i+1)
+}
+
+for( i in 0:49) {
+  movie_table[i,1] <- movies_text[1+4*i]
+  movie_table[i,3] <- movies_text[2+4*i]
+  movie_table[i,4] <- movies_text[3+4*i]
+  movie_table[i,2] <- gross_text[i+1]
+}
+
+
+
+#ATTEMPT 2
+
+movies_text2 <- read_html(url)%>%
+  html_node(xpath = '.ratings-metascore , strong , .ghost~ .text-muted+ span , .lister-item-header a') %>%
+  html_text()
+
+movie_table3 <- as.tibble(movies_text2)
+
+movie_table4 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
+
+
+for( i in 0:49) {
+  movie_table4[i,1] <- slice(movie_table3, 1+4*i)
+  movie_table4[i,3] <- slice(movie_table3, 2+4*i)
+  movie_table4[i,4] <- slice(movie_table3, 3+4*i)
+  movie_table4[i,2] <- slice(movie_table3, 4+4*i)
+}
+
+for( i in 0:49) {
+  movie_table4[i,1] <- movies_text2[1+4*i]
+  movie_table4[i,3] <- movies_text2[2+4*i]
+  movie_table4[i,4] <- movies_text2[3+4*i]
+  movie_table4[i,2] <- movies_text2[4+4*i]
+}
+
+#ATTEMPT 3
+
+movie_titles <- read_html(url)%>%
+  html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "lister-item-header", " " ))]//a') %>%
+  html_text()
+
+myapikey <- "94f27d05"
+
+movie_table5 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
+
+for(i in 1:50) {
+  url2 <- str_c("http://www.omdbapi.com/?t=",movie_titles[i],
+               "&y=2017&apikey=", myapikey)
+  onemovie <- GET(url)
+  details <- content(onemovie, "parse")
+  movie_table5[i,1] <- details$Title
+  movie_table5[i,4] <- parse_number(details$Metascore)
+  movie_table5[i,3] <- parse_number(details$imdbRating)
+  movie_table5[i,2] <- parse_number(details$BoxOffice)   # no $ and ,'s
+}
+
+
+#ATTEMPT 4
+
+url <- "https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc"
+
+movies <- read_html(url)
+movies2 <- html_nodes(movies, '.ratings-metascore , strong , .ghost~ .text-muted+ span , .lister-item-header a')
+movies3 <- html_text(2)
 
 ```
 
@@ -75,8 +169,39 @@ Read Chapter 15 on factors and attempt the following problems:
 4. In the `nycflights13` data, just consider flights to O'Hare (dest=="ORD"), and summarize the mean arrival delay by carrier (actually use the entire name of the carrier after merging carrier names into `flights`).  Then use `geom_point` to plot mean arrival delay vs. carrier - first without reordering carrier names, and second after reordering carrier names by mean arrival delay.
 
 ```{r}
+ohare <- flights %>%
+  filter(dest == "ORD") %>%
+  group_by(carrier)%>%
+  summarise(avg_delay = mean(arr_delay, na.rm = TRUE))%>%
+  left_join(airlines)
 
+ggplot(ohare, aes(x = avg_delay, y = name))+
+  geom_point()
+
+ohare2 <- ohare %>%
+  mutate(name = fct_reorder(name, avg_delay))
+
+ggplot(ohare2, aes(x = avg_delay, y = name))+
+  geom_point()
 ```
 
 
 5. Again considering only flights to O'Hare, create a new factor variable which differentiates national carriers (American and United) from regional carriers (all others which fly to O'Hare).  Then create a violin plot comparing arrival delays for all flights to O'Hare from those two groups (you might want to exclude arrival delays over a certain level).
+
+```{r}
+ohare3 <- flights %>%
+  filter(dest == "ORD") %>%
+  group_by(carrier)%>%
+  summarise(avg_delay = mean(arr_delay, na.rm = TRUE))%>%
+  left_join(airlines)%>%
+  mutate(airline_type = ifelse(name == "United Air Lines Inc." | name == "American Airlines Inc.", "national", "regional"),
+         avg_delay = ifelse(avg_delay<0, 0, avg_delay))%>%
+  filter(avg_delay <30)
+
+ggplot(ohare3, aes(x = airline_type, y = avg_delay))+
+  geom_violin()
+```
+
+
+name = fct_collapse(name, national = c("United Air Lines Inc.", "American Airlines Inc."),
+                            regional = c("Endeavor Air Inc.", "JetBlue Airways", "Envoy Air", "ExpressJet Airlines Inc.", "SkyWest Airlines Inc.")),
