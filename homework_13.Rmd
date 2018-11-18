@@ -93,6 +93,10 @@ movie_table4 <- movie_table4 %>%
          imdb_score = parse_number(imdb_score),
          metascore = parse_number(metascore))%>%
   select(title, gross_mil, imdb_score, metascore)
+
+ggplot(movie_table4, aes(x = metascore, y = gross_mil))+
+  geom_point()+
+  geom_label_repel(label = movie_table4$title)
 ```
 
 
@@ -138,6 +142,3 @@ ggplot(ohare3, aes(x = airline_type, y = avg_delay))+
   geom_violin()
 ```
 
-
-name = fct_collapse(name, national = c("United Air Lines Inc.", "American Airlines Inc."),
-                            regional = c("Endeavor Air Inc.", "JetBlue Airways", "Envoy Air", "ExpressJet Airlines Inc.", "SkyWest Airlines Inc.")),
