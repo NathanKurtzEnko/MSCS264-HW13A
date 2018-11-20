@@ -73,7 +73,7 @@ Hints:
 
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
 
-```{r eval=FALSE}
+```{r}
 url <- "https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc"
 
 movies <- read_html(url)
@@ -112,7 +112,7 @@ ggplot(movie_table4, aes(x = metascore, y = gross_mil))+
   geom_label_repel(aes(label = title), data = fin_outliers2)
 ```
 
-\textbf{Answer:} 
+\textbf{Answer:} outliers in terms of metascore are: dunkirk, baby driver, and the shape of water. outliers in terms of gross income are: jumanji, wonder woman, beauty and the beast, and star wars.
 
 3. 5 points if you push your Rmd file with HW13 solutions along with the knitted pdf file to your MSCS264-HW13 repository in your GitHub account.  So that I can check, make your repository private (good practice when doing HW), but add me (username = proback) as a collaborator under Settings > Collaborators.
 
