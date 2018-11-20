@@ -52,9 +52,15 @@ crimes4 <- crimes3 %>%
          `burglary` = as.numeric(`burglary`), `larceny` = as.numeric(`larceny`),
          `gta` = as.numeric(`gta`), Population = parse_number(Population))
 
+outliers <- crimes4 %>%
+  filter(total_prop_crime<1600 | total_prop_crime>6100)
+outliers1 <- crimes4 %>%
+  filter(total_violent_crime<160| total_violent_crime>1700)
+fin_outliers <- full_join(outliers, outliers1)
+
 ggplot(crimes4, aes(x = total_violent_crime, y = total_prop_crime))+
   geom_jitter()+
-  geom_label_repel(label = crimes4$City)
+  geom_label_repel(aes(label = City), data = fin_outliers)
 ```
 
 
@@ -63,7 +69,7 @@ Hints:
 - after reading in the table using `html_table()`, create a data frame with just the columns you want, using a command such as: `crimes3 <- as.data.frame(crimes2)[,c(LIST OF COLUMN NUMBERS)]`.  Otherwise, R gets confused since it appears as if several columns all have the same column name.
 - then, turn `crimes3` into a tibble with `as.tibble(crimes3)` and do necessary tidying: get rid of unneeded rows, parse columns into proper format, etc.
 
-\textbf{Answer:} St. Louis, Oakland, memphis, Irvine, and Plano have extreme values of VCrate and PCrate.
+\textbf{Answer:} I didn't really know what exactly to have as my outliers so I set some maximums and minimums for property crime and violent crime and labelled cities exceeding those limits. Outliers in terms of property crim include: Tuscon, San Francisco, and St Louis, Irvine, New York, and Jersey City. Outliers in terms of violent crime are St Louis, Detroit, and Memphis, Irvine, Virginia Beach, and Plano.
 
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
 
@@ -82,10 +88,10 @@ for(i in 7:206) {
 movie_table4 <- tibble(title = character(), gross = double(), imdb_score = double(), metascore = double())
 
 for(i in 1:49) {
-  movie_table4[i,1] <- movies4[1+4*i]
-  movie_table4[i,3] <- movies4[2+4*i]
-  movie_table4[i,4] <- movies4[3+4*i]
-  movie_table4[i,2] <- movies4[4+4*i]
+  movie_table4[i,1] <- movies4[4*i-3]
+  movie_table4[i,3] <- movies4[4*i-2]
+  movie_table4[i,4] <- movies4[4*i-1]
+  movie_table4[i,2] <- movies4[4*i]
 }
 
 movie_table4 <- movie_table4 %>%
@@ -94,11 +100,19 @@ movie_table4 <- movie_table4 %>%
          metascore = parse_number(metascore))%>%
   select(title, gross_mil, imdb_score, metascore)
 
+outliers2 <- movie_table4 %>%
+  filter(gross_mil>400)
+outliers3 <- movie_table4 %>%
+  filter(metascore>85)
+fin_outliers2 <- full_join(outliers2, outliers3)
+  
+
 ggplot(movie_table4, aes(x = metascore, y = gross_mil))+
   geom_point()+
-  geom_label_repel(label = movie_table4$title)
+  geom_label_repel(aes(label = title), data = fin_outliers2)
 ```
 
+\textbf{Answer:} 
 
 3. 5 points if you push your Rmd file with HW13 solutions along with the knitted pdf file to your MSCS264-HW13 repository in your GitHub account.  So that I can check, make your repository private (good practice when doing HW), but add me (username = proback) as a collaborator under Settings > Collaborators.
 
@@ -134,8 +148,8 @@ ohare3 <- flights %>%
   group_by(carrier)%>%
   summarise(avg_delay = mean(arr_delay, na.rm = TRUE))%>%
   left_join(airlines)%>%
-  mutate(airline_type = ifelse(name == "United Air Lines Inc." | name == "American Airlines Inc.", "national", "regional"),
-         avg_delay = ifelse(avg_delay<0, 0, avg_delay))%>%
+  mutate(vg_delay = ifelse(avg_delay<0, 0, avg_delay),
+    airline_type = as.factor(ifelse(name == "United Air Lines Inc." | name == "American Airlines Inc.", "national", "regional")))%>%
   filter(avg_delay <30)
 
 ggplot(ohare3, aes(x = airline_type, y = avg_delay))+
